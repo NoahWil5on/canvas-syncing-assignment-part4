@@ -2,12 +2,89 @@
 <html lang="en">
 <head>
     <script src="https://npmcdn.com/babel-core@5.8.38/browser.min.js"></script>
+    <script src = "/socket.io/socket.io.js"></script>
     <script type="text/babel" >
         "use strict";
-    
+        let socket;
+        let canvas;
+        let ctx;
+        let bufCanvas;
+        let bufCtx;
+        let myTime;
+        let position = {x: Math.floor(Math.random()*400), y:Math.floor(Math.random()*400)};
+        let draws = [];
+
+        const connect = () => {
+            socket = io.connect();
+
+            socket.on('draw', (data) => {
+                let image = new Image();
+
+                image.onload = () => {
+                    ctx.save();
+                    ctx.globalCompositeOperation = 'source-over';
+                    ctx.drawImage(image,data.x,data.y,data.width,data.height);
+                    ctx.restore();
+                }
+
+                image.src = data.imgData;
+            })
+            socket.on('connect', () => {
+                socket.emit('join', {});
+                ctx.fillStyle = '#ff0000';
+                bufCtx.fillStyle = '#000000';
+                ctx.fillRect(100,100,200,200);
+                bufCtx.fillRect(0,0,200,200);
+
+                const data = {
+                    x: 300,
+                    y: 300,
+                    height: 200,
+                    width: 200,
+                    imgData: bufCanvas.toDataURL()
+                }
+
+                socket.emit('draw', data);
+            });
+        }
+        const draw = () => {
+            ctx.clearRect(0,0,canvas.width,canvas.height);
+            window.requestAnimationFrame(update);
+
+            for(let i = 0; i < draws.length; i++){
+                ctx.fillStyle = '#000000';
+                let call = draws[i];
+                if(call.time == myTime){
+                    ctx.fillStyle = '#ff0000';
+                }
+
+                ctx.fillRect(call.coords.x,call.coords.y,50,50);
+            }
+
+            console.log(draws);
+            
+        }
+        const init = () => {
+            connect();
+
+            canvas = document.getElementById('myCanvas');
+            bufCanvas = document.getElementById('myBuffer');
+            bufCanvas.height = 200;
+            bufCanvas.width = 200;
+            canvas.height = 600;
+            canvas.width = 600;
+
+            ctx = canvas.getContext('2d');
+            bufCtx = bufCanvas.getContext('2d');
+            //update();
+        }
+        window.onload = init;
     </script>
 </head>
 <body>
-
+    <canvas id="myCanvas" style="border: solid 2px black">
+    </canvas>
+    <canvas id="myBuffer" style="visibility: hidden">
+    </canvas>
 </body>
 </html>
